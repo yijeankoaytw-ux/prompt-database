@@ -1,0 +1,15 @@
+{
+  "name": "ai-prompt-dictionary",
+  "version": "1.0.0",
+  "description": "AI指令庫 - 查找精準的AI指令",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@google/generative-ai": "^0.24.1"
+  }
+}

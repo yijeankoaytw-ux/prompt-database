@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>AI指令庫</title>
+    <meta name="description" content="查找精準的AI指令。">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256'%3E%3Ctext y='50%25' x='50%25' dominant-baseline='middle' text-anchor='middle' font-size='160'%3E💬%3C/text%3E%3C/svg%3E">
+    <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+    <div class="app">
+        <aside class="sidebar">
+            <div class="brand">
+                <div class="logo">💬</div>
+                <div class="title">提示字典</div>
+            </div>
+            <div class="search">
+                <input id="globalSearch" type="search" placeholder="搜尋元件…" autocomplete="off" aria-haspopup="listbox" aria-expanded="false" aria-controls="promptSuggestions">
+                <div id="promptSuggestions" class="suggestions" role="listbox" aria-label="提示建議" hidden></div>
+            </div>
+            <nav id="categoryList" class="categories" aria-label="分類">
+                <!-- Filled by app.js -->
+            </nav>
+        </aside>
+        <main class="main">
+            <header class="toolbar">
+                <div class="breadcrumbs" id="breadcrumbs">首頁 ▸ <span>全部</span></div>
+                <div class="actions">
+                    <button id="clearSelection" class="btn btn-secondary" title="清除已選元件">清除</button>
+                    <button id="copyPrompt" class="btn btn-primary" title="將提示複製到剪貼簿">複製提示</button>
+                </div>
+            </header>
+
+            <section class="content">
+                <div class="panel variations-panel">
+                    <div class="panel-header">
+                        <h2 id="panelTitle">變化</h2>
+                        <div class="panel-controls">
+                            <select id="subcategoryFilter" aria-label="子分類篩選">
+                                <option value="">所有子分類</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="variationGrid" class="grid">
+                        <!-- Filled by app.js -->
+                    </div>
+                </div>
+
+                <div class="panel builder-panel">
+                    <div class="panel-header">
+                        <h2>提示建構器</h2>
+                        <div class="panel-controls">
+                            <label class="inline">
+                                <input type="checkbox" id="delimiterNewlines" checked>
+                                <span>使用換行</span>
+                            </label>
+                            <label class="inline">
+                                <span>分隔符</span>
+                                <select id="delimiter">
+                                    <option value=", ">逗號</option>
+                                    <option value="; ">分號</option>
+                                    <option value=" | ">管線符</option>
+                                    <option value=" ">空白</option>
+                                </select>
+                            </label>
+                        </div>
+                    </div>
+                    <div id="selectedList" class="chips">
+                        <!-- Filled by app.js -->
+                    </div>
+                    <textarea id="output" class="output" rows="10" spellcheck="false" aria-label="產生的提示"></textarea>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+
+    <script src="./app.js" type="module"></script>
+</body>
+</html>
+
+

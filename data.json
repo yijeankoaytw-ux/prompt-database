@@ -1,0 +1,316 @@
+[
+  {
+    "id": "action-templates",
+    "name": "動作範本",
+    "icon": "🏃",
+    "isDynamic": true,
+    "subcategories": [
+      {
+        "id": "standing",
+        "name": "站姿",
+        "variations": [
+          { "id": "standing-duck-stance", "label": "雙腳外八的站姿（鴨子步）" },
+          { "id": "standing-one-leg", "label": "單腳站立" },
+          { "id": "standing-crossed-arms", "label": "雙手交叉站立" },
+          { "id": "standing-hands-hips", "label": "雙手叉腰站立" },
+          { "id": "standing-profile", "label": "側面站姿" },
+          { "id": "standing-leaning", "label": "靠牆站立" },
+          { "id": "standing-weight-shift", "label": "重心偏向一側站立" },
+          { "id": "standing-wide-stance", "label": "寬站距站姿" },
+          { "id": "standing-relaxed", "label": "放鬆站姿" },
+          { "id": "standing-alert", "label": "警覺站姿" }
+        ]
+      },
+      {
+        "id": "walking",
+        "name": "走路",
+        "variations": [
+          { "id": "walking-forward", "label": "向前走，步伐自然" },
+          { "id": "walking-side", "label": "側視走路，手臂擺動" },
+          { "id": "walking-slow", "label": "慢走，沉思感" },
+          { "id": "walking-fast", "label": "快步走，果斷步調" },
+          { "id": "walking-crossing", "label": "走路時雙手交叉" },
+          { "id": "walking-phone", "label": "走路時看手機" }
+        ]
+      },
+      {
+        "id": "sitting",
+        "name": "坐姿",
+        "variations": [
+          { "id": "sitting-chair", "label": "坐在椅子上，姿勢端正" },
+          { "id": "sitting-relaxed", "label": "隨意坐，身體後仰" },
+          { "id": "sitting-crossed-legs", "label": "雙腿交叉坐" },
+          { "id": "sitting-floor", "label": "盤腿坐在地上" }
+        ]
+      },
+      {
+        "id": "running",
+        "name": "跑步",
+        "variations": [
+          { "id": "running-sprint", "label": "短跑前傾奔跑" },
+          { "id": "running-jog", "label": "慢跑，輕鬆步調" },
+          { "id": "running-side", "label": "側視跑步，中途步伐" }
+        ]
+      },
+      {
+        "id": "squatting",
+        "name": "蹲姿",
+        "variations": [
+          { "id": "squat-down", "label": "下蹲，重心平衡" },
+          { "id": "squat-deep", "label": "深蹲，腳跟著地" },
+          { "id": "squat-half", "label": "半蹲，預備姿勢" }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "camera-angles",
+    "name": "攝影機角度",
+    "icon": "🎥",
+    "isDynamic": true,
+    "subcategories": [
+      {
+        "id": "framing",
+        "name": "構圖",
+        "variations": [
+          { "id": "close-up", "label": "特寫構圖" },
+          { "id": "medium-shot", "label": "中景" },
+          { "id": "full-body", "label": "全身構圖" }
+        ]
+      },
+      {
+        "id": "angles",
+        "name": "視角",
+        "variations": [
+          { "id": "low-angle", "label": "低角度視角" },
+          { "id": "high-angle", "label": "高角度視角" },
+          { "id": "eye-level", "label": "視線水平視角" }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "styles",
+    "name": "風格",
+    "icon": "🎨",
+    "isDynamic": true,
+    "subcategories": [
+      {
+        "id": "lighting",
+        "name": "燈光",
+        "variations": [
+          { "id": "soft-light", "label": "柔和漫射光" },
+          { "id": "dramatic-light", "label": "戲劇性明暗對比" },
+          { "id": "backlit", "label": "逆光剪影" }
+        ]
+      },
+      {
+        "id": "mood",
+        "name": "氛圍",
+        "variations": [
+          { "id": "serene", "label": "寧靜平和的氛圍" },
+          { "id": "energetic", "label": "動態有活力的氛圍" },
+          { "id": "mysterious", "label": "陰暗神祕的氣息" }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "objects",
+    "name": "物件",
+    "icon": "📦",
+    "isDynamic": true,
+    "subcategories": [
+      {
+        "id": "object-type",
+        "name": "種類",
+        "variations": [
+          { "id": "object-furniture", "label": "家具（椅子、桌子、沙發）" },
+          { "id": "object-vehicle", "label": "交通工具（汽車、腳踏車、船）" },
+          { "id": "object-tool", "label": "工具（鐵鎚、扳手、電鑽）" }
+        ]
+      },
+      {
+        "id": "object-material",
+        "name": "材質",
+        "variations": [
+          { "id": "object-wood", "label": "木質表面" },
+          { "id": "object-metal", "label": "拉絲金屬" },
+          { "id": "object-glass", "label": "透明玻璃" }
+        ]
+      },
+      {
+        "id": "object-state",
+        "name": "狀態",
+        "variations": [
+          { "id": "object-new", "label": "全新無瑕" },
+          { "id": "object-worn", "label": "磨損風化" },
+          { "id": "object-broken", "label": "破損，邊緣裂痕" }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "animals",
+    "name": "動物",
+    "icon": "🐾",
+    "isDynamic": true,
+    "subcategories": [
+      {
+        "id": "animal-mammals",
+        "name": "哺乳類",
+        "variations": [
+          { "id": "animal-cat-sit", "label": "貓咪坐姿，尾巴環繞" },
+          { "id": "animal-dog-run", "label": "狗狗奔跑，舌頭外露" },
+          { "id": "animal-horse-stand", "label": "馬匹站立，側面視角" }
+        ]
+      },
+      {
+        "id": "animal-birds",
+        "name": "鳥類",
+        "variations": [
+          { "id": "animal-eagle-soar", "label": "老鷹翱翔，雙翼張開" },
+          { "id": "animal-sparrow-perch", "label": "麻雀停棲枝頭" }
+        ]
+      },
+      {
+        "id": "animal-reptiles",
+        "name": "爬蟲類",
+        "variations": [
+          { "id": "animal-snake-coil", "label": "蛇身盤繞，抬頭" },
+          { "id": "animal-lizard-bask", "label": "蜥蜴在岩石上曬太陽" }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "humans",
+    "name": "人類",
+    "icon": "🧑",
+    "isDynamic": true,
+    "subcategories": [
+      {
+        "id": "human-demographics",
+        "name": "族群",
+        "variations": [
+          { "id": "human-adult-male", "label": "成年男性" },
+          { "id": "human-adult-female", "label": "成年女性" },
+          { "id": "human-child", "label": "孩童" },
+          { "id": "human-elderly", "label": "年長者" }
+        ]
+      },
+      {
+        "id": "human-clothing",
+        "name": "服裝",
+        "variations": [
+          { "id": "human-casual", "label": "休閒穿搭" },
+          { "id": "human-formal", "label": "正式服裝" },
+          { "id": "human-sportswear", "label": "運動裝束" }
+        ]
+      },
+      {
+        "id": "human-hair",
+        "name": "髮型",
+        "variations": [
+          { "id": "human-short-hair", "label": "短髮" },
+          { "id": "human-long-hair", "label": "長髮" },
+          { "id": "human-curly-hair", "label": "捲髮" }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "lighting-mood",
+    "name": "光線與情緒",
+    "icon": "💡",
+    "isDynamic": true,
+    "subcategories": [
+      {
+        "id": "lighting-types",
+        "name": "光線類型",
+        "variations": [
+          { "id": "light-natural-sun", "label": "自然陽光" },
+          { "id": "light-golden-hour", "label": "黃金時刻光線" },
+          { "id": "light-blue-hour", "label": "藍色時刻光線" },
+          { "id": "light-warm-tone", "label": "暖色調光線" },
+          { "id": "light-cool-tone", "label": "冷色調光線" },
+          { "id": "light-soft-diffused", "label": "柔和漫射光" },
+          { "id": "light-harsh-direct", "label": "強烈直射光" },
+          { "id": "light-rim-light", "label": "邊緣光" },
+          { "id": "light-backlit", "label": "逆光" },
+          { "id": "light-sidelight", "label": "側光" },
+          { "id": "light-top-light", "label": "頂光" },
+          { "id": "light-bottom-light", "label": "底光" },
+          { "id": "light-candlelight", "label": "燭光" },
+          { "id": "light-neon", "label": "霓虹燈光" },
+          { "id": "light-streetlight", "label": "街燈光" },
+          { "id": "light-firelight", "label": "火光" },
+          { "id": "light-moonlight", "label": "月光" },
+          { "id": "light-studio-soft", "label": "柔光箱光線" },
+          { "id": "light-chiaroscuro", "label": "明暗對比光" }
+        ]
+      },
+      {
+        "id": "mood-emotions",
+        "name": "情緒氛圍",
+        "variations": [
+          { "id": "mood-joyful", "label": "歡樂愉悅" },
+          { "id": "mood-melancholic", "label": "憂鬱感傷" },
+          { "id": "mood-peaceful", "label": "平和寧靜" },
+          { "id": "mood-dramatic", "label": "戲劇張力" },
+          { "id": "mood-mysterious", "label": "神秘氛圍" },
+          { "id": "mood-romantic", "label": "浪漫情調" },
+          { "id": "mood-nostalgic", "label": "懷舊感" },
+          { "id": "mood-energetic", "label": "活力四射" },
+          { "id": "mood-somber", "label": "陰鬱沉重" },
+          { "id": "mood-hopeful", "label": "充滿希望" },
+          { "id": "mood-tense", "label": "緊張不安" },
+          { "id": "mood-serene", "label": "恬靜祥和" },
+          { "id": "mood-dreamy", "label": "夢幻迷離" },
+          { "id": "mood-eerie", "label": "詭異陰森" },
+          { "id": "mood-celebratory", "label": "慶祝歡騰" },
+          { "id": "mood-lonely", "label": "孤獨寂寥" },
+          { "id": "mood-intimate", "label": "親密私密" },
+          { "id": "mood-epic", "label": "史詩壯麗" },
+          { "id": "mood-minimalist", "label": "極簡純淨" }
+        ]
+      },
+      {
+        "id": "lighting-time",
+        "name": "時間光線",
+        "variations": [
+          { "id": "time-sunrise", "label": "日出時分" },
+          { "id": "time-morning", "label": "清晨時光" },
+          { "id": "time-noon", "label": "正午時分" },
+          { "id": "time-afternoon", "label": "午後時光" },
+          { "id": "time-sunset", "label": "日落時分" },
+          { "id": "time-dusk", "label": "黃昏時分" },
+          { "id": "time-night", "label": "夜晚" },
+          { "id": "time-midnight", "label": "午夜時分" },
+          { "id": "time-dawn", "label": "破曉時分" }
+        ]
+      },
+      {
+        "id": "mood-weather",
+        "name": "天氣氛圍",
+        "variations": [
+          { "id": "weather-sunny", "label": "晴朗明媚" },
+          { "id": "weather-cloudy", "label": "多雲陰沉" },
+          { "id": "weather-rainy", "label": "雨天陰鬱" },
+          { "id": "weather-foggy", "label": "霧氣瀰漫" },
+          { "id": "weather-stormy", "label": "暴風雨來襲" },
+          { "id": "weather-snowy", "label": "雪天清冷" },
+          { "id": "weather-hazy", "label": "朦朧霧霾" }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "scenes",
+    "name": "場景",
+    "icon": "🌍",
+    "isDynamic": true,
+    "sceneTypes": ["森林", "沙漠", "海洋", "山脈"]
+  }
+]
+
