@@ -40,7 +40,7 @@ const els = {
   panelTitle: document.getElementById('panelTitle'),
   subcategoryFilter: document.getElementById('subcategoryFilter'),
   breadcrumbs: document.getElementById('breadcrumbs'),
-  selectedList: document.getElementById('selectedList'),
+  selectedList: document.getElementById('selectedList'), // May be null if using modular blocks
   output: document.getElementById('output'),
   copyPrompt: document.getElementById('copyPrompt'),
   clearSelection: document.getElementById('clearSelection'),
@@ -48,7 +48,9 @@ const els = {
   delimiter: document.getElementById('delimiter'),
   globalSearch: document.getElementById('globalSearch'),
   toast: document.getElementById('toast'),
-  promptSuggestions: document.getElementById('promptSuggestions')
+  promptSuggestions: document.getElementById('promptSuggestions'),
+  modularBlocks: document.getElementById('modularBlocks'),
+  randomizeBtn: document.getElementById('randomizeBtn')
 };
 
 let state = {
@@ -56,6 +58,8 @@ let state = {
   selectedSubcategoryId: '',
   query: '',
   selected: [], // array of { id, label }
+  selectedModel: 'midjourney', // 新增：選中的模型
+  promptBlocks: [], // 新增：模組化提示塊 [{ type, value, isLocked }, ...]
   // 所有動態類別的狀態
   dynamicState: {
     // 場景類別的特殊狀態
@@ -71,6 +75,64 @@ let state = {
 const STORAGE_KEY = 'prompt_dictionary_v1';
 const SCENE_MODIFIERS_KEY = 'scene_modifiers_v1';
 const CUSTOM_VARIATIONS_KEY = 'custom_variations_v1';
+const MODEL_STORAGE_KEY = 'selected_model_v1';
+const BLOCKS_STORAGE_KEY = 'prompt_blocks_v1';
+
+// 模組類型定義
+const BLOCK_TYPES = {
+  CHARACTER: 'Character',
+  ENVIRONMENT: 'Environment',
+  LIGHTING: 'Lighting',
+  CAMERA: 'Camera',
+  STYLE: 'Style',
+  MOOD: 'Mood',
+  COMPOSITION: 'Composition'
+};
+
+// Autocomplete suggestions for each block type
+const BLOCK_SUGGESTIONS = {
+  [BLOCK_TYPES.CHARACTER]: [
+    '成年男性', '成年女性', '孩童', '年長者',
+    '貓咪坐姿', '狗狗奔跑', '馬匹站立',
+    '休閒穿搭', '正式服裝', '運動裝束',
+    '短髮', '長髮', '捲髮'
+  ],
+  [BLOCK_TYPES.ENVIRONMENT]: [
+    '森林', '沙漠', '海洋', '山脈',
+    '家具（椅子、桌子、沙發）', '交通工具（汽車、腳踏車、船）',
+    '木質表面', '拉絲金屬', '透明玻璃',
+    '全新無瑕', '磨損風化', '破損，邊緣裂痕'
+  ],
+  [BLOCK_TYPES.LIGHTING]: [
+    'Cinematic', 'Soft Light', 'Volumetric', 'Neon',
+    '自然陽光', '黃金時刻光線', '藍色時刻光線',
+    '柔和漫射光', '戲劇性明暗對比', '逆光剪影',
+    '暖色調光線', '冷色調光線', '邊緣光',
+    '燭光', '霓虹燈光', '月光'
+  ],
+  [BLOCK_TYPES.CAMERA]: [
+    'Wide Angle', 'Macro', '85mm', 'Drone View',
+    '特寫構圖', '中景', '全身構圖',
+    '低角度視角', '高角度視角', '視線水平視角',
+    '側面視角', '俯視', '仰視'
+  ],
+  [BLOCK_TYPES.STYLE]: [
+    '寧靜平和的氛圍', '動態有活力的氛圍', '陰暗神祕的氣息',
+    '夢幻迷離', '電影感', '賽博龐克',
+    '極簡風格', '復古風格', '未來主義'
+  ],
+  [BLOCK_TYPES.MOOD]: [
+    '歡樂愉悅', '憂鬱感傷', '平和寧靜',
+    '戲劇張力', '神秘氛圍', '浪漫情調',
+    '懷舊感', '活力四射', '陰鬱沉重',
+    '充滿希望', '緊張不安', '恬靜祥和'
+  ],
+  [BLOCK_TYPES.COMPOSITION]: [
+    '對稱構圖', '三分法則', '中心構圖',
+    '引導線構圖', '框架構圖', '負空間構圖',
+    '動態構圖', '靜態構圖'
+  ]
+};
 
 // 默認修飾詞
 const DEFAULT_MODIFIERS = {
@@ -145,15 +207,289 @@ function getCategoryVariations(categoryId) {
   return cat;
 }
 
+// ---------- Model Selector Functions ----------
+function initModelSelector() {
+  const modelButtons = document.querySelectorAll('.model-btn');
+  modelButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const model = btn.dataset.model;
+      state.selectedModel = model;
+      
+      // Update active state
+      modelButtons.forEach(b => {
+        b.removeAttribute('data-active');
+        b.classList.remove('active');
+      });
+      btn.setAttribute('data-active', 'true');
+      btn.classList.add('active');
+      
+      // Save to localStorage
+      try {
+        localStorage.setItem(MODEL_STORAGE_KEY, model);
+      } catch (e) {
+        // ignore
+      }
+      
+      // Re-render blocks if needed
+      renderModularBlocks();
+      updateOutput();
+      showToast(`已切換到 ${btn.textContent} 模式`);
+    });
+  });
+  
+  // Restore saved model
+  try {
+    const saved = localStorage.getItem(MODEL_STORAGE_KEY);
+    if (saved) {
+      state.selectedModel = saved;
+      const btn = document.querySelector(`.model-btn[data-model="${saved}"]`);
+      if (btn) {
+        btn.setAttribute('data-active', 'true');
+        btn.classList.add('active');
+      }
+    }
+  } catch (e) {
+    // ignore
+  }
+}
+
+// ---------- Modular Blocks System ----------
+function initializeBlocks() {
+  // Initialize default blocks if empty
+  if (state.promptBlocks.length === 0) {
+    state.promptBlocks = [
+      { type: BLOCK_TYPES.CHARACTER, value: '', isLocked: false },
+      { type: BLOCK_TYPES.ENVIRONMENT, value: '', isLocked: false },
+      { type: BLOCK_TYPES.LIGHTING, value: '', isLocked: false },
+      { type: BLOCK_TYPES.CAMERA, value: '', isLocked: false },
+      { type: BLOCK_TYPES.STYLE, value: '', isLocked: false }
+    ];
+  }
+  renderModularBlocks();
+}
+
+function renderModularBlocks() {
+  if (!els.modularBlocks) return;
+  
+  els.modularBlocks.innerHTML = '';
+  
+  state.promptBlocks.forEach((block, index) => {
+    const blockEl = document.createElement('div');
+    blockEl.className = 'modular-block';
+    blockEl.dataset.index = index;
+    
+    const lockIcon = block.isLocked ? '🔒' : '🔓';
+    blockEl.innerHTML = `
+      <div class="block-header">
+        <div class="block-title">
+          <span class="block-type">${block.type}</span>
+          <button class="block-lock-btn" data-index="${index}" title="${block.isLocked ? '解鎖' : '鎖定'}">
+            ${lockIcon}
+          </button>
+        </div>
+      </div>
+      <div class="block-content">
+        <div class="block-input-wrapper">
+          <input 
+            type="text" 
+            class="block-input" 
+            data-index="${index}"
+            data-block-type="${block.type}"
+            value="${block.value}"
+            placeholder="輸入 ${block.type} 描述..."
+            ${block.isLocked ? 'readonly' : ''}
+            autocomplete="off"
+          />
+          <div class="block-autocomplete" data-index="${index}" hidden></div>
+        </div>
+      </div>
+    `;
+    
+    // Lock toggle
+    const lockBtn = blockEl.querySelector('.block-lock-btn');
+    lockBtn.addEventListener('click', () => toggleBlockLock(index));
+    
+    // Input change and autocomplete
+    const input = blockEl.querySelector('.block-input');
+    const autocompleteEl = blockEl.querySelector('.block-autocomplete');
+    
+    if (!block.isLocked) {
+      input.addEventListener('input', (e) => {
+        updateBlockValue(index, e.target.value);
+        showAutocomplete(index, e.target.value, block.type);
+      });
+      
+      input.addEventListener('focus', (e) => {
+        if (e.target.value) {
+          showAutocomplete(index, e.target.value, block.type);
+        }
+      });
+      
+      input.addEventListener('blur', () => {
+        // Delay to allow click on suggestion
+        setTimeout(() => {
+          hideAutocomplete(index);
+        }, 200);
+      });
+    }
+    
+    els.modularBlocks.appendChild(blockEl);
+  });
+  
+  updateOutput();
+}
+
+function showAutocomplete(blockIndex, value, blockType) {
+  const autocompleteEl = document.querySelector(`.block-autocomplete[data-index="${blockIndex}"]`);
+  if (!autocompleteEl) return;
+  
+  const suggestions = BLOCK_SUGGESTIONS[blockType] || [];
+  const query = value.trim().toLowerCase();
+  
+  if (!query || suggestions.length === 0) {
+    hideAutocomplete(blockIndex);
+    return;
+  }
+  
+  // Filter suggestions
+  const filtered = suggestions.filter(s => 
+    s.toLowerCase().includes(query) && s.toLowerCase() !== query
+  ).slice(0, 5); // Show max 5 suggestions
+  
+  if (filtered.length === 0) {
+    hideAutocomplete(blockIndex);
+    return;
+  }
+  
+  autocompleteEl.innerHTML = '';
+  filtered.forEach(suggestion => {
+    const item = document.createElement('div');
+    item.className = 'autocomplete-item';
+    item.textContent = suggestion;
+    item.addEventListener('mousedown', (e) => {
+      e.preventDefault(); // Prevent input blur
+      selectAutocompleteSuggestion(blockIndex, suggestion);
+    });
+    autocompleteEl.appendChild(item);
+  });
+  
+  autocompleteEl.hidden = false;
+}
+
+function hideAutocomplete(blockIndex) {
+  const autocompleteEl = document.querySelector(`.block-autocomplete[data-index="${blockIndex}"]`);
+  if (autocompleteEl) {
+    autocompleteEl.hidden = true;
+  }
+}
+
+function selectAutocompleteSuggestion(blockIndex, suggestion) {
+  if (state.promptBlocks[blockIndex]) {
+    state.promptBlocks[blockIndex].value = suggestion;
+    renderModularBlocks();
+    saveBlocksState();
+  }
+}
+
+function toggleBlockLock(index) {
+  if (state.promptBlocks[index]) {
+    state.promptBlocks[index].isLocked = !state.promptBlocks[index].isLocked;
+    renderModularBlocks();
+    saveBlocksState();
+  }
+}
+
+function updateBlockValue(index, value) {
+  if (state.promptBlocks[index]) {
+    state.promptBlocks[index].value = value;
+    updateOutput();
+    saveBlocksState();
+  }
+}
+
+function randomizeUnlockedBlocks() {
+  const unlockedBlocks = state.promptBlocks.filter(b => !b.isLocked);
+  
+  if (unlockedBlocks.length === 0) {
+    showToast('所有模組都已鎖定');
+    return;
+  }
+  
+  // Get random suggestions from categories
+  unlockedBlocks.forEach(block => {
+    const suggestions = getRandomSuggestionsForBlock(block.type);
+    if (suggestions.length > 0) {
+      block.value = suggestions[Math.floor(Math.random() * suggestions.length)];
+    }
+  });
+  
+  renderModularBlocks();
+  showToast(`已隨機化 ${unlockedBlocks.length} 個模組`);
+}
+
+function getRandomSuggestionsForBlock(blockType) {
+  const suggestions = [];
+  
+  // Map block types to categories
+  const categoryMap = {
+    [BLOCK_TYPES.CHARACTER]: ['humans', 'animals'],
+    [BLOCK_TYPES.ENVIRONMENT]: ['scenes', 'objects'],
+    [BLOCK_TYPES.LIGHTING]: ['lighting-mood'],
+    [BLOCK_TYPES.CAMERA]: ['camera-angles'],
+    [BLOCK_TYPES.STYLE]: ['styles'],
+    [BLOCK_TYPES.MOOD]: ['lighting-mood'],
+    [BLOCK_TYPES.COMPOSITION]: ['camera-angles']
+  };
+  
+  const categoryIds = categoryMap[blockType] || [];
+  
+  categoryIds.forEach(catId => {
+    const cat = DATA.find(c => c.id === catId);
+    if (cat && cat.subcategories) {
+      cat.subcategories.forEach(sub => {
+        if (sub.variations) {
+          sub.variations.forEach(v => {
+            suggestions.push(v.label);
+          });
+        }
+      });
+    }
+  });
+  
+  return suggestions;
+}
+
+function saveBlocksState() {
+  try {
+    localStorage.setItem(BLOCKS_STORAGE_KEY, JSON.stringify(state.promptBlocks));
+  } catch (e) {
+    // ignore
+  }
+}
+
+function loadBlocksState() {
+  try {
+    const saved = localStorage.getItem(BLOCKS_STORAGE_KEY);
+    if (saved) {
+      state.promptBlocks = JSON.parse(saved);
+    }
+  } catch (e) {
+    // ignore
+  }
+}
+
+
 function saveState() {
   const toSave = {
     selectedCategoryId: state.selectedCategoryId,
     selectedSubcategoryId: state.selectedSubcategoryId,
     selected: state.selected,
-    delimiterNewlines: els.delimiterNewlines.checked,
-    delimiter: els.delimiter.value,
+    delimiterNewlines: els.delimiterNewlines ? els.delimiterNewlines.checked : false,
+    delimiter: els.delimiter ? els.delimiter.value : ', ',
     dynamicState: state.dynamicState,
-    outputText: els.output.value // 保存用戶編輯的內容
+    outputText: els.output.value, // 保存用戶編輯的內容
+    selectedModel: state.selectedModel,
+    promptBlocks: state.promptBlocks
   };
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
@@ -170,26 +506,28 @@ function restoreState() {
     if (parsed.selectedCategoryId) state.selectedCategoryId = parsed.selectedCategoryId;
     if (typeof parsed.selectedSubcategoryId === 'string') state.selectedSubcategoryId = parsed.selectedSubcategoryId;
     if (Array.isArray(parsed.selected)) state.selected = parsed.selected;
-    if (typeof parsed.delimiterNewlines === 'boolean') els.delimiterNewlines.checked = parsed.delimiterNewlines;
-    if (typeof parsed.delimiter === 'string') els.delimiter.value = parsed.delimiter;
+    // These elements may not exist if using modular blocks
+    if (typeof parsed.delimiterNewlines === 'boolean' && els.delimiterNewlines) {
+      els.delimiterNewlines.checked = parsed.delimiterNewlines;
+    }
+    if (typeof parsed.delimiter === 'string' && els.delimiter) {
+      els.delimiter.value = parsed.delimiter;
+    }
     if (parsed.dynamicState && typeof parsed.dynamicState === 'object') {
       state.dynamicState = { ...state.dynamicState, ...parsed.dynamicState };
     }
+    if (parsed.selectedModel) state.selectedModel = parsed.selectedModel;
+    if (Array.isArray(parsed.promptBlocks)) state.promptBlocks = parsed.promptBlocks;
     // 恢復用戶編輯的內容
     if (typeof parsed.outputText === 'string') {
       els.output.value = parsed.outputText;
-      // 如果保存的內容與當前選中項目生成的內容不同，則標記為用戶編輯
-      const delimiter = els.delimiter.value;
-      const useNewlines = els.delimiterNewlines.checked;
-      const parts = state.selected.map(s => s.label);
-      const autoGenerated = useNewlines ? parts.join('\n') : parts.join(delimiter);
-      if (parsed.outputText !== autoGenerated) {
-        isUserEditing = true;
-      }
     }
   } catch (e) {
     // ignore
   }
+  
+  // Load blocks state separately
+  loadBlocksState();
 }
 
 function showToast(message) {
@@ -199,8 +537,64 @@ function showToast(message) {
 }
 
 function renderCategories() {
+  if (!els.categoryList) return;
+  
+  // Verify state - log the search term
+  const searchTerm = state.query || '';
+  console.log('Search term:', searchTerm);
+  console.log('State query:', state.query);
+  
+  // Clear the list first
   els.categoryList.innerHTML = '';
-  DATA.forEach(cat => {
+  
+  // Create filter logic - derive filteredCategories BEFORE rendering
+  const searchTermLower = searchTerm.trim().toLowerCase();
+  
+  const filteredCategories = DATA.filter(category => {
+    // If no search term, show all categories
+    if (!searchTermLower) {
+      return true;
+    }
+    
+    // Match category name
+    const categoryNameMatch = category.name.toLowerCase().includes(searchTermLower);
+    if (categoryNameMatch) return true;
+    
+    // Deep search: Check subcategory names
+    if (category.subcategories && Array.isArray(category.subcategories)) {
+      const subcategoryMatch = category.subcategories.some(sub => {
+        if (!sub || !sub.name) return false;
+        return sub.name.toLowerCase().includes(searchTermLower);
+      });
+      if (subcategoryMatch) return true;
+      
+      // Deep search: Check variation labels within subcategories
+      const variationMatch = category.subcategories.some(sub => {
+        if (!sub || !sub.variations || !Array.isArray(sub.variations)) return false;
+        return sub.variations.some(variation => {
+          if (!variation || !variation.label) return false;
+          return variation.label.toLowerCase().includes(searchTermLower);
+        });
+      });
+      if (variationMatch) return true;
+    }
+    
+    // Check sceneTypes for dynamic categories
+    if (category.sceneTypes && Array.isArray(category.sceneTypes)) {
+      const sceneTypeMatch = category.sceneTypes.some(sceneType => {
+        if (!sceneType) return false;
+        return sceneType.toLowerCase().includes(searchTermLower);
+      });
+      if (sceneTypeMatch) return true;
+    }
+    
+    return false;
+  });
+  
+  console.log(`Filtered ${filteredCategories.length} categories from ${DATA.length} total`);
+  
+  // Update render: iterate over filteredCategories instead of original DATA
+  filteredCategories.forEach(cat => {
     const el = document.createElement('button');
     el.type = 'button';
     el.className = 'cat' + (state.selectedCategoryId === cat.id ? ' active' : '');
@@ -662,6 +1056,12 @@ function removeSelected(id) {
 }
 
 function renderSelected() {
+  // Safety check: ensure the container element exists
+  if (!els.selectedList) {
+    console.warn('selectedList element not found in DOM');
+    return;
+  }
+  
   els.selectedList.innerHTML = '';
   state.selected.forEach(item => {
     const chip = document.createElement('span');
@@ -679,34 +1079,21 @@ let isUserEditing = false;
 let lastSelectedCount = 0;
 
 function updateOutput() {
-  const delimiter = els.delimiter.value;
-  const useNewlines = els.delimiterNewlines.checked;
-  const parts = state.selected.map(s => s.label);
+  // Use modular blocks to generate prompt
+  const delimiter = ', ';
+  const blocks = state.promptBlocks
+    .filter(block => block.value && block.value.trim())
+    .map(block => block.value.trim());
   
-  // 如果用户正在编辑，追加新选择的内容
-  if (isUserEditing) {
-    // 只追加新增的选项
-    const newSelections = state.selected.slice(lastSelectedCount);
-    if (newSelections.length > 0) {
-      const newText = useNewlines 
-        ? newSelections.map(s => s.label).join('\n')
-        : newSelections.map(s => s.label).join(delimiter);
-      
-      // 如果输出框不为空，添加分隔符后再追加
-      if (els.output.value.trim()) {
-        els.output.value += (useNewlines ? '\n' : delimiter) + newText;
-      } else {
-        els.output.value = newText;
-      }
-    }
-    lastSelectedCount = state.selected.length;
-    return;
+  const prompt = blocks.join(delimiter);
+  els.output.value = prompt;
+  
+  // Also update based on selected items if they exist (backward compatibility)
+  if (state.selected.length > 0 && blocks.length === 0) {
+    const parts = state.selected.map(s => s.label);
+    const joined = parts.join(delimiter);
+    els.output.value = joined;
   }
-  
-  // 如果用户没有编辑，完全替换内容
-  const joined = useNewlines ? parts.join('\n') : parts.join(delimiter);
-  els.output.value = joined;
-  lastSelectedCount = state.selected.length;
 }
 
 // ---------- AI Prompt Suggestion Engine ----------
@@ -1296,25 +1683,39 @@ function resetCategory(categoryId) {
 
 function attachEvents() {
   // 注意：subcategoryFilter 的事件處理已經在 renderSubcategoryFilter 中處理
-  els.copyPrompt.addEventListener('click', copyToClipboard);
-  els.clearSelection.addEventListener('click', clearSelection);
-  els.delimiter.addEventListener('change', () => { 
-    // 如果用户正在编辑，保持追加模式；否则完全替换
-    if (!isUserEditing) {
+  if (els.copyPrompt) els.copyPrompt.addEventListener('click', copyToClipboard);
+  if (els.clearSelection) els.clearSelection.addEventListener('click', clearSelection);
+  
+  // New modular blocks events
+  if (els.randomizeBtn) els.randomizeBtn.addEventListener('click', randomizeUnlockedBlocks);
+  
+  // These elements may not exist if using modular blocks
+  if (els.delimiter) {
+    els.delimiter.addEventListener('change', () => { 
       updateOutput();
-    }
-    saveState(); 
-  });
-  els.delimiterNewlines.addEventListener('change', () => { 
-    // 如果用户正在编辑，保持追加模式；否则完全替换
-    if (!isUserEditing) {
+      saveState(); 
+    });
+  }
+  if (els.delimiterNewlines) {
+    els.delimiterNewlines.addEventListener('change', () => { 
       updateOutput();
-    }
-    saveState(); 
-  });
+      saveState(); 
+    });
+  }
   els.globalSearch.addEventListener('input', (e) => {
-    state.query = e.target.value;
-    renderVariations();
+    // Update state with search term
+    const searchTerm = e.target.value;
+    state.query = searchTerm;
+    
+    // Debug: Verify state update
+    console.log('Search input changed:', searchTerm);
+    console.log('State updated to:', state.query);
+    
+    // Immediately update categories and variations
+    renderCategories(); // Update categories based on search
+    renderVariations(); // Update variations based on search
+    
+    // Also trigger AI suggestions (debounced)
     debouncedFetchSuggestions(state.query);
   });
   els.globalSearch.addEventListener('focus', () => {
@@ -1382,6 +1783,7 @@ function attachEvents() {
 }
 
 function renderAll() {
+  // Always render categories with current search filter
   renderCategories();
   renderBreadcrumbs();
   renderSubcategoryFilter();
@@ -1403,6 +1805,12 @@ async function init() {
     }
     return;
   }
+  
+  // Initialize model selector
+  initModelSelector();
+  
+  // Initialize modular blocks
+  initializeBlocks();
   
   // default category
   if (!state.selectedCategoryId) state.selectedCategoryId = DATA[0]?.id;

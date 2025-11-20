@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>3D Pose Editor</title>
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+      body {
+        margin: 0;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        background: #0f1115;
+        color: #f5f7fb;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+      header {
+        padding: 1rem clamp(1rem, 3vw, 2.5rem);
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        background: rgba(255, 255, 255, 0.04);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      }
+      header h1 {
+        margin: 0;
+        font-size: clamp(1.2rem, 2.5vw, 1.6rem);
+      }
+      header a,
+      header button {
+        color: #7dd3fc;
+        text-decoration: none;
+        font-weight: 500;
+        background: transparent;
+        border: 1px solid rgba(125, 211, 252, 0.4);
+        border-radius: 999px;
+        padding: 0.4rem 0.85rem;
+        cursor: pointer;
+        transition: background 0.2s, color 0.2s;
+      }
+      header a:hover,
+      header button:hover {
+        background: rgba(125, 211, 252, 0.12);
+      }
+      #rendererContainer {
+        flex: 1;
+        position: relative;
+      }
+      canvas {
+        display: block;
+      }
+      #loading {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        padding: 0.5rem 0.85rem;
+        border-radius: 999px;
+        background: rgba(0, 0, 0, 0.6);
+        font-size: 0.9rem;
+        pointer-events: none;
+      }
+      #snapshotPreview {
+        position: absolute;
+        bottom: 1rem;
+        right: 1rem;
+        width: 160px;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        border-radius: 8px;
+        background: rgba(0, 0, 0, 0.4);
+        padding: 0.25rem;
+      }
+      #snapshotPreview img {
+        width: 100%;
+        display: block;
+        border-radius: 4px;
+      }
+    </style>
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+          "three/examples/jsm/controls/OrbitControls.js": "https://unpkg.com/three@0.160.0/examples/jsm/controls/OrbitControls.js",
+          "three/examples/jsm/controls/TransformControls.js": "https://unpkg.com/three@0.160.0/examples/jsm/controls/TransformControls.js",
+          "three/examples/jsm/loaders/GLTFLoader.js": "https://unpkg.com/three@0.160.0/examples/jsm/loaders/GLTFLoader.js"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <header>
+      <h1>3D Pose Editor (Forward Kinematics)</h1>
+      <a href="./index.html">← Back to Home</a>
+      <button id="capturePoseBtn" type="button">📸 Capture Pose</button>
+    </header>
+    <div id="rendererContainer">
+      <div id="loading">Loading character...</div>
+      <div id="snapshotPreview" hidden>
+        <img alt="Latest pose snapshot" />
+      </div>
+    </div>
+
+    <script type="module">
+      import * as THREE from 'three';
+      import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+      import { TransformControls } from 'three/examples/jsm/controls/TransformControls.js';
+      import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+
+      const container = document.getElementById('rendererContainer');
+      const loadingBadge = document.getElementById('loading');
+      const capturePoseBtn = document.getElementById('capturePoseBtn');
+      const snapshotPreview = document.getElementById('snapshotPreview');
+      const snapshotImg = snapshotPreview.querySelector('img');
+
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x0f1115);
+      const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+      camera.position.set(2, 1.5, 3);
+
+      const renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setSize(window.innerWidth, window.innerHeight - container.offsetTop);
+      renderer.outputEncoding = THREE.sRGBEncoding;
+      container.appendChild(renderer.domElement);
+
+      const orbit = new OrbitControls(camera, renderer.domElement);
+      orbit.enableDamping = true;
+
+      const transformControls = new TransformControls(camera, renderer.domElement);
+      transformControls.setMode('rotate');
+      transformControls.setSpace('local');
+      transformControls.addEventListener('dragging-changed', (event) => {
+        orbit.enabled = !event.value;
+      });
+      scene.add(transformControls);
+
+      const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1.0);
+      hemiLight.position.set(0, 20, 0);
+      scene.add(hemiLight);
+
+      const dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
+      dirLight.position.set(5, 5, 5);
+      scene.add(dirLight);
+
+      const gridHelper = new THREE.GridHelper(10, 20);
+      scene.add(gridHelper);
+
+      const raycaster = new THREE.Raycaster();
+      const pointer = new THREE.Vector2();
+      const boneMarkers = [];
+      let selectedMarker = null;
+
+      const MARKER_RADIUS = 5;
+      const markerGeometry = new THREE.SphereGeometry(MARKER_RADIUS, 16, 16);
+      const greenMaterial = new THREE.MeshBasicMaterial({
+        color: 0x00ff00,
+        transparent: true,
+        opacity: 0.6,
+        depthTest: false
+      });
+      const redMaterial = new THREE.MeshBasicMaterial({
+        color: 0xff4477,
+        transparent: true,
+        opacity: 0.6,
+        depthTest: false
+      });
+
+      const loader = new GLTFLoader();
+      loader.load(
+        'https://raw.githubusercontent.com/mrdoob/three.js/master/examples/models/gltf/Xbot.glb',
+        (gltf) => {
+          loadingBadge.remove();
+          const model = gltf.scene;
+          model.scale.setScalar(1);
+          scene.add(model);
+          visualizeBones(model);
+        },
+        undefined,
+        (error) => {
+          loadingBadge.textContent = 'Failed to load model';
+          console.error('GLTF load error', error);
+        }
+      );
+
+      function visualizeBones(root) {
+        root.traverse((object) => {
+          if (object.isBone) {
+            const marker = new THREE.Mesh(markerGeometry, greenMaterial.clone());
+            marker.userData.bone = object;
+            boneMarkers.push(marker);
+            object.add(marker);
+          }
+        });
+      }
+
+      function resetMarkerColors() {
+        boneMarkers.forEach((marker) => {
+          marker.material.color.copy(greenMaterial.color);
+        });
+      }
+
+      function onPointerDown(event) {
+        const rect = renderer.domElement.getBoundingClientRect();
+        pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+        pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+        raycaster.setFromCamera(pointer, camera);
+        const intersects = raycaster.intersectObjects(boneMarkers, true);
+
+        if (intersects.length > 0) {
+          const marker = intersects[0].object;
+          const bone = marker.userData.bone;
+          if (bone) {
+            console.log(`Hit object: ${marker.name || bone.name || 'bone'}`);
+            selectBone(marker, bone);
+          }
+        } else {
+          console.log('Clicked on background');
+        }
+      }
+
+      function selectBone(marker, bone) {
+        resetMarkerColors();
+        marker.material.color.copy(redMaterial.color);
+        selectedMarker = marker;
+        transformControls.attach(bone);
+      }
+
+      window.addEventListener('pointerdown', onPointerDown);
+      capturePoseBtn.addEventListener('click', capturePose);
+
+      function onResize() {
+        const width = window.innerWidth;
+        const height = window.innerHeight - container.offsetTop;
+        camera.aspect = width / height;
+        camera.updateProjectionMatrix();
+        renderer.setSize(width, height);
+      }
+      window.addEventListener('resize', onResize);
+
+      function animate() {
+        requestAnimationFrame(animate);
+        orbit.update();
+        renderer.render(scene, camera);
+      }
+      animate();
+
+      function capturePose() {
+        const originalBackground = scene.background ? scene.background.clone() : null;
+        const originalGridVisibility = gridHelper.visible;
+        const originalTransformVisibility = transformControls.visible;
+        const markerVisibility = boneMarkers.map(marker => marker.visible);
+
+        scene.background = new THREE.Color(0x000000);
+        gridHelper.visible = false;
+        transformControls.visible = false;
+        boneMarkers.forEach(marker => {
+          marker.visible = false;
+        });
+
+        renderer.render(scene, camera);
+        const dataUrl = renderer.domElement.toDataURL('image/png');
+        snapshotImg.src = dataUrl;
+        snapshotPreview.hidden = false;
+
+        scene.background = originalBackground || new THREE.Color(0x0f1115);
+        gridHelper.visible = originalGridVisibility;
+        transformControls.visible = originalTransformVisibility;
+        boneMarkers.forEach((marker, index) => {
+          marker.visible = markerVisibility[index];
+        });
+      }
+    </script>
+  </body>
+</html>
+

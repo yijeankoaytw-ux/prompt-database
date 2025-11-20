@@ -27,6 +27,7 @@
             <header class="toolbar">
                 <div class="breadcrumbs" id="breadcrumbs">首頁 ▸ <span>全部</span></div>
                 <div class="actions">
+                    <a href="./pose_editor.html" class="btn btn-outline" title="開啟 3D 姿勢編輯器" target="_blank" rel="noopener">3D Pose Editor</a>
                     <button id="clearSelection" class="btn btn-secondary" title="清除已選元件">清除</button>
                     <button id="copyPrompt" class="btn btn-primary" title="將提示複製到剪貼簿">複製提示</button>
                 </div>
@@ -49,27 +50,30 @@
 
                 <div class="panel builder-panel">
                     <div class="panel-header">
-                        <h2>提示建構器</h2>
+                        <h2>模組化提示建構器</h2>
                         <div class="panel-controls">
-                            <label class="inline">
-                                <input type="checkbox" id="delimiterNewlines" checked>
-                                <span>使用換行</span>
-                            </label>
-                            <label class="inline">
-                                <span>分隔符</span>
-                                <select id="delimiter">
-                                    <option value=", ">逗號</option>
-                                    <option value="; ">分號</option>
-                                    <option value=" | ">管線符</option>
-                                    <option value=" ">空白</option>
-                                </select>
-                            </label>
+                            <button id="randomizeBtn" class="btn btn-secondary btn-small" title="隨機化未鎖定的模組">🔄 AI 生成</button>
                         </div>
                     </div>
-                    <div id="selectedList" class="chips">
+                    <div id="modularBlocks" class="modular-blocks">
                         <!-- Filled by app.js -->
                     </div>
-                    <textarea id="output" class="output" rows="10" spellcheck="false" aria-label="產生的提示"></textarea>
+                    <div class="model-selector-section">
+                        <label class="model-label">模型選擇：</label>
+                        <div class="model-options">
+                            <button class="model-btn" data-model="midjourney" data-active="true">Midjourney</button>
+                            <button class="model-btn" data-model="stable-diffusion">Stable Diffusion</button>
+                            <button class="model-btn" data-model="nano-banana">Nano Banana</button>
+                            <button class="model-btn" data-model="natural-language">Natural Language</button>
+                        </div>
+                    </div>
+                    <div class="prompt-output-section">
+                        <div class="output-header">
+                            <label>AI 生成提示：</label>
+                            <button id="copyPrompt" class="btn btn-primary btn-small" title="複製提示">複製</button>
+                        </div>
+                        <textarea id="output" class="output" rows="6" spellcheck="false" aria-label="產生的提示" readonly></textarea>
+                    </div>
                 </div>
             </section>
         </main>
